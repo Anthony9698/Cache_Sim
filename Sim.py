@@ -4,7 +4,6 @@
 import sys
 import math
 
-print("testing.....................................")
 
 cacheSz = int(sys.argv[4])
 blockSz = int(sys.argv[6])
