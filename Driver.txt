@@ -1,0 +1,41 @@
+#! /usr/bin/python3
+import sys
+file_name = sys.argv[1]
+try:
+    input_file = open(file_name, "r")
+except FileNotFoundError:
+    raise FileNotFoundError("Input file does not exist")
+
+# header
+print("Cache Simulator CS3853 Spring 2019 - Group #***\n")
+
+non_zero_count = 0
+for line in input_file:
+    # strip newline and tab characters from every line
+    line = line.strip('\n')
+    line = line.strip('\t')
+
+    if non_zero_count == 20:
+        break
+
+    # if empty line, skip
+    if len(line.strip()) == 0:
+        continue
+
+    # break the line into a list of individual chars
+    line_tokens = list(line)
+    line_prefix = ''.join(line_tokens[0:3])
+
+    if line_prefix == 'EIP':
+        bytes_read = ''.join(line_tokens[5:7])
+        instr_addr_str = ''.join(line_tokens[10:18])
+    
+    if line_prefix == 'dst':
+        dstM = ''.join(line_tokens[6:14])
+
+        # if the address isn't zero, print info about EIP and dstM
+        if dstM != '00000000':
+            print("0x" + instr_addr_str + ":(" + bytes_read + ")")
+            print(dstM + "\n")
+            non_zero_count += 1
+
