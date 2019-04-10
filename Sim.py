@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# Example run: ./Sim.py -f TinyTrace.trc -s 1024 -b 16 -a 2 -r RR
 
 
 import sys
@@ -10,39 +11,81 @@ blockSz = int(sys.argv[6])
 associativity = int(sys.argv[8])
 offset = math.log(blockSz, 2)
 
+# TODO(1): implement RR, RND, and LRU(bonus if we can)
+#       replacement policies
 
+
+# TODO(2): calculate...
+#                   > Total Cache Accesses (hits + misses)
+#                   > Cache Hits
+#                   > Cache Misses
+#                   > Compulsory Misses
+#                   > Conflict Misses
+
+
+# TODO(3): create appropriate arrays (multidimensional if assoc > 1)
+#       to set up cache using this object.
+#       Example: CacheSize: 4096, ASSOC: 2
+#       CacheBlock cache[4096][2]
+#                         ^    ^
+#                      INDEX# SET#
+# represents a block in a cache
+class CacheBlock:
+    'Common base class for all cache blocks'
+    hit_count = 0
+    miss_count = 0
+
+    # cache block constructor
+    def __init__(self, hex_index=0, hex_tag=0, hex_data=0):
+        self.hex_index = hex_index
+        self.vi_bit = 0
+        self.hex_index = hex_tag
+
+    # returns information about object (toString)
+    # example print(cache_block)
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+# dictionary used to convert hex numbers to binary
 hex2bin_map = {
-   "0":"0000",
-   "1":"0001",
-   "2":"0010",
-   "3":"0011",
-   "4":"0100",
-   "5":"0101",
-   "6":"0110",
-   "7":"0111",
-   "8":"1000",
-   "9":"1001",
-   "a":"1010",
-   "b":"1011",
-   "c":"1100",
-   "d":"1101",
-   "e":"1110",
-   "f":"1111",
+   "0": "0000",
+   "1": "0001",
+   "2": "0010",
+   "3": "0011",
+   "4": "0100",
+   "5": "0101",
+   "6": "0110",
+   "7": "0111",
+   "8": "1000",
+   "9": "1001",
+   "a": "1010",
+   "b": "1011",
+   "c": "1100",
+   "d": "1101",
+   "e": "1110",
+   "f": "1111",
 }
 
 
+# converts a hex string into a binary string
+# example: 0x123 = 000100100011
 def hex_to_binary_str(hex_str):
     binary_str = "".join(hex2bin_map[i] for i in hex_str)
 
     return binary_str
 
 
-# OIT- offset index tag
-def get_hex_for_OIT(src_b, tag_bits, index_bits):
+# TODO(4): use tag and index info returned from this
+#       method to create cache block objects
+def get_hex_for_tag_index(src_b, tag_bits, index_bits):
     tag_bit_str = ''
     index_bit_str = ''
-    offset_bit_str = ''
 
+    # prints instruction address in binary (for debugging)
+    print(src_b)
+
+    # sections bits for tag and index
     for bit in src_b:
         if len(tag_bit_str) != tag_bits:
             tag_bit_str += bit
@@ -50,14 +93,15 @@ def get_hex_for_OIT(src_b, tag_bits, index_bits):
         elif len(index_bit_str) != index_bits:
             index_bit_str += bit
 
-        else:
-            offset_bit_str += bit
-
     tag_hex = hex(int(tag_bit_str, 2))
     index_hex = hex(int(index_bit_str, 2))
-    offset_hex = hex(int(offset_bit_str, 2))
 
-    return tag_hex, index_hex, offset_hex
+    # printing index and tag values in hex (for debugging)
+    print("INDEX: ", index_hex)
+    print("TAG: ", tag_hex)
+    print("=============================")
+
+    #return tag_hex, index_hex
 
 
 def calcIndexBits(assocBits, cacheBits, offset):
@@ -119,6 +163,17 @@ def calcTotalImplementationSz(totalOverhead, cacheBits):
     return total_imp_sz
 
 
+def next_avail_col(cache, hex_index):
+    index = 0
+    int_index = int(hex_index, 10)
+    for blk in cache[int_index]:
+        if blk.vi_bit == 0:
+            return index
+        else:
+            index += 1
+    return index
+
+
 cacheBits = int(math.log(cacheSz, 2)) + 10
 assocBits = int(math.log(associativity, 2))
 indexBits = calcIndexBits(assocBits, cacheBits, offset)
@@ -134,6 +189,7 @@ totalOverSz_str = format(totalOverheadSz, ",d")
 totalImpSz_str = format(totalImplementationSz, ",d")
 totalOverheadSz_kb_str = str(int(totalOverheadSz / 1024))
 totalImpSz_kb_str = str(int(totalImplementationSz / 1024))
+
 
 print("Cache Simulator CS 3853 Spring 2019-Group 8")
 print('Cmd Line:', sys.argv[0], sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
@@ -157,7 +213,12 @@ print('Total Implementation Memory Size:', totalImpSz_str, 'bytes (or ' + totalI
 print('-----Results-----')
 print('Cache Hit Rate:%')
 
+# setting up cache
+rows = int(math.pow(indexBits, 2))
+cols = int(associativity)
+cache = [[CacheBlock() for j in range(cols)] for i in range(rows)]
 
+# parsing
 file_name = sys.argv[2]
 try:
     input_file = open(file_name, "r")
@@ -169,9 +230,6 @@ for line in input_file:
     # strip newline and tab characters from every line
     line = line.strip('\n')
     line = line.strip('\t')
-
-    if non_zero_count == 10:
-        break
 
     # if empty line, skip
     if len(line.strip()) == 0:
@@ -188,14 +246,13 @@ for line in input_file:
     if line_prefix == 'dst':
         dstM = ''.join(line_tokens[6:14])
         srcM = ''.join(line_tokens[33:41])
-        srcM_b = hex_to_binary_str(srcM)
 
-        # print info about EIP, dstM, and srcM
-        print("0x" + instr_addr_str + ":(" + bytes_read + ")")
-        if dstM != '00000000':
-            print("0x--->" + dstM + ":(04)")
-        if srcM != '00000000':
-            print("0x-->" + srcM_b + ":(04)")
-            tag_hex, index_hex, offset_hex = get_hex_for_OIT(srcM_b, tagBits, indexBits)
+        # sets string instruction address to binary string
+        # example: 0x7C81EB33 = 01111100100000011110101100110011
+        instr_addr_str_b = hex_to_binary_str(instr_addr_str)
 
-        non_zero_count += 1
+        # print current instruction address (testing for now)
+        print("Instruction Address: ", instr_addr_str)
+
+        # prints hex tag and hex index
+        get_hex_for_tag_index(instr_addr_str_b, tagBits, indexBits)
