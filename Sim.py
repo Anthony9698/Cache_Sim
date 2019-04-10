@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+# Sample Run Command: ./Sim.py -f Trace2A.trc -s 1024 -b 16 -a 2 -r RR
 
 import sys
 import math
