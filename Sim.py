@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # Example run: ./Sim.py -f TinyTrace.trc -s 1024 -b 16 -a 2 -r RR
 
+# Sample Run Command: ./Sim.py -f Trace2A.trc -s 1024 -b 16 -a 2 -r RR
 
 import sys
 import math
