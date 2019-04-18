@@ -202,6 +202,7 @@ def rr_block_replacement(cache_obj, index):
 
 def update_cache(cache, ndx, tag):
     global miss_count, conflict_count, compulsory_count
+    global line_count, rows
 
     # every block in set has a vi bit set to zero
     if check_if_cache_empty(cache, ndx) is True:
@@ -219,6 +220,7 @@ def update_cache(cache, ndx, tag):
         # set is full at cache[int_ndx], find blk to replace with RR
         if col == -1:
             conflict_count += 1
+            print("-- Conflict MISS!")
             low, high = rr_block_replacement(cache, ndx)
             high_clk = cache[ndx][high].clock
             cache[ndx][low].vi_bit = 1
@@ -259,7 +261,7 @@ def format_hex_num(unformatted_hex):
 
 
 def access_cache(hex_address, bytes_read):
-    global cache, blockSz
+    global cache, blockSz, rows, miss_count
 
     binary_addr_str = hex_to_binary_str(hex_address)
     hex_tag = convert_to_hex_tag(binary_addr_str)
@@ -275,19 +277,24 @@ def access_cache(hex_address, bytes_read):
     ''' if binary offset after add is more than block size
         find out how many cache blocks it accesses'''
     if binary_offset > blockSz:
-        access_count = int(binary_offset / blockSz)
-        count = 0
+        access_count = float(binary_offset / blockSz)
 
+        if math.ceil(access_count) == int(access_count):
+            access_count = int(access_count - 1)
+        else:
+            access_count = int(access_count)
+
+        count = 0
         ''' while there are more cache blocks to access'''
         while count < access_count:
-            start = 0
-            end = tagBits
-            hex_tag = hex(int(binary_addr_str[start:end], 2))
+            index += 1
 
-            start = tagBits
-            end = tagBits+indexBits
-            str_index = binary_addr_str[start:end]
-            index = int(str_index, 2) + 1
+            ''' if index is more than total rows,
+                increment tag and get new index '''
+            if index >= rows:
+                hex_index_str = hex_to_binary_str(hex(index)[2:])
+                index = int(hex_index_str[-indexBits:], 2)
+                hex_tag = hex(int(hex_tag, 16) + 1)
 
             cache = update_cache(cache, index, hex_tag)
             count += 1
@@ -314,9 +321,6 @@ print("Cache Simulator CS 3853 Spring 2019-Group 8")
 print('Cmd Line:', sys.argv[0], sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
       sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8], sys.argv[9], sys.argv[10])
 print('Trace File:', sys.argv[2])
-print('Cache Size:', cacheSz, 'KB')
-print('Block Size:', blockSz, 'bytes')
-print('Associativity:', associativity)
 print('R-Policy:', sys.argv[10])
 print('Generic:')
 print('Cache Size:', cacheSz, 'KB')
@@ -351,6 +355,7 @@ try:
 except FileNotFoundError:
     raise FileNotFoundError("Input file does not exist")
 
+line_count = 1
 # for every eip and dstm instruction
 for line in input_file:
     # strip newline and tab characters from every line
@@ -388,6 +393,7 @@ for line in input_file:
         if srcM != '00000000':
             access_cache(srcM, bytes_read)
 
+        line_count += 2
 
 total_cache_accesses = hit_count + miss_count
 miss_rate = miss_count / total_cache_accesses
@@ -401,3 +407,5 @@ print("--- Compulsory Misses:\t   ", compulsory_count)
 print("--- Conflict Misses:\t   ", conflict_count, "\n\n")
 print("***** *****  CACHE MISS RATE:  ***** *****\n")
 print("Miss Rate = ", miss_rate)
+
+input_file.close()
