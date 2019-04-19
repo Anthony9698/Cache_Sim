@@ -220,7 +220,6 @@ def update_cache(cache, ndx, tag):
         # set is full at cache[int_ndx], find blk to replace with RR
         if col == -1:
             conflict_count += 1
-            print("-- Conflict MISS!")
             low, high = rr_block_replacement(cache, ndx)
             high_clk = cache[ndx][high].clock
             cache[ndx][low].vi_bit = 1
@@ -321,12 +320,11 @@ print("Cache Simulator CS 3853 Spring 2019-Group 8")
 print('Cmd Line:', sys.argv[0], sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
       sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8], sys.argv[9], sys.argv[10])
 print('Trace File:', sys.argv[2])
-print('R-Policy:', sys.argv[10])
 print('Generic:')
 print('Cache Size:', cacheSz, 'KB')
 print('Block Size:', blockSz, 'bytes')
 print('Associativity:', associativity)
-print('Policy:', sys.argv[10])
+print('R-Policy:', sys.argv[10])
 print('-----Calculated Values-----')
 print('Total #Blocks:', totalBlocks, totalBlocksSuffix, '(2^' + str(totalBlocksBits) + ')')
 print('Tag Size:', tagBits, 'bits')
