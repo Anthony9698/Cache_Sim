@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-# Currently Running as: ./Sim.py -f Trace2A.trc -s 2048 -b 16 -a 2 -r RR
-
 import sys
 import math
 
@@ -15,23 +13,20 @@ compulsory_count = 0
 conflict_count = 0
 
 
-# represents a block in a cache
+""" Represents a cache block object """
 class CacheBlock:
-    'Common base class for all cache blocks'
-
     # cache block constructor
     def __init__(self):
         self.vi_bit = 0
         self.hex_tag = 0x0
         self.clock = 0
 
-    # returns information about object (toString)
-    # example print(cache_block)
+    # returns information about cache object (toString)
     def __repr__(self):
         return str(self.__dict__)
 
 
-# dictionary used to convert hex numbers to binary
+""" Dictionary used to convert hex numbers to binary """
 hex2bin_map = {
    "0": "0000",
    "1": "0001",
@@ -52,14 +47,14 @@ hex2bin_map = {
 }
 
 
-# converts a hex string into a binary string
-# example: 0x123 = 000100100011
+""" Converts a hex string (w/out 0x) to a binary string """
 def hex_to_binary_str(hex_str):
     binary_str = "".join(hex2bin_map[i] for i in hex_str)
 
     return binary_str
 
 
+""" Takes binary address string and returns hex tag partitioned """
 def convert_to_hex_tag(bin_addr_str):
     global tagBits
     start = 0
@@ -70,6 +65,7 @@ def convert_to_hex_tag(bin_addr_str):
     return hex_tag
 
 
+""" Takes binary address string and returns index partitioned """
 def convert_to_hex_index(bin_addr_str):
     global tagBits, indexBits
     start = tagBits
@@ -80,6 +76,7 @@ def convert_to_hex_index(bin_addr_str):
     return index
 
 
+""" Returns the number of bits required for the offset """
 def calcIndexBits(assocBits, cacheBits, offset):
 
     if assocBits == 0:
@@ -90,6 +87,7 @@ def calcIndexBits(assocBits, cacheBits, offset):
     return bits
 
 
+""" Returns the total number of indices in the cache """
 def calcTotalIndices(indexBits):
     diff = int(indexBits / 10) * 10
     ndx_bits = indexBits - diff
@@ -98,6 +96,7 @@ def calcTotalIndices(indexBits):
     return total_indices
 
 
+""" Returns the correct suffix based on the number of bits """
 def calcSuffix(bits):
     suffix = "b"
     if bits < 10:
@@ -115,6 +114,7 @@ def calcSuffix(bits):
     return suffix
 
 
+""" Returns the total number of blocks in the cache """
 def calcTotalBlocks(assocBits, indexBits):
     bits = assocBits + indexBits
     diff = int(bits / 10) * 10
@@ -124,22 +124,28 @@ def calcTotalBlocks(assocBits, indexBits):
     return total_blocks
 
 
+# TODO: FIX CALCULATION
 def calcOverheadSz(tagBits, assoc, indexBits):
     overheadBits = (tagBits * assoc) + assoc
     totalIndicesBytes = (math.pow(2, 15)) / 8
-    totalOverheadSz = int(overheadBits * totalIndicesBytes)
+    OverheadSz = int(overheadBits * totalIndicesBytes)
 
-    return totalOverheadSz
+    return OverheadSz
 
 
+# TODO: FIX CALCULATION
 def calcTotalImplementationSz(totalOverhead, cacheBits):
-    cacheSz = math.pow(2, cacheBits)
-    total_imp_sz = int(totalOverhead + cacheSz)
+    cache_size = math.pow(2, cacheBits)
+    total_imp_sz = int(totalOverhead + cache_size)
 
     return total_imp_sz
 
 
-# cache miss, tag not set
+""" Called on cache miss
+    Searches for an available block (col) in cache set
+    Returns index of available block if vi bit 0 
+    Returns -1 if set is full (all blocks vi bit 1) 
+"""
 def next_avail_col_blk(cache_obj, index):
     global compulsory_count
     col_ndx = 0
@@ -154,6 +160,12 @@ def next_avail_col_blk(cache_obj, index):
     return -1
 
 
+""" Returns True if set in cache is empty
+    (All blocks vi bit set to 0)
+    
+    Returns False if at least one block in
+    set has vi bit set to 1
+"""
 def check_if_cache_empty(cache_obj, index):
     for blk in cache_obj[index]:
         if blk.vi_bit != 0:
@@ -162,6 +174,15 @@ def check_if_cache_empty(cache_obj, index):
     return True
 
 
+""" Returns True and increments hit count if 
+    the tag passed in matches a tag in one of
+    the blocks at cache[index] and vi bit is
+    set to 1
+    
+    Returns False and increments miss count if
+    none of the tags matched or vi bit was
+    set to 0
+"""
 def tags_match(cache_obj, index, tag):
     global miss_count
     global hit_count
@@ -170,39 +191,57 @@ def tags_match(cache_obj, index, tag):
             hit_count += 1
             return True
 
-    # didn't find a matching tag or valid bit
-    # was not set
     miss_count += 1
     return False
 
 
+""" RR Policy (FIFO)
+    
+    Returns the index of the block that has
+    the lowest clock and the index of the 
+    block that has the highest clock
+    
+    Block with the lowest clock is the one
+    we are replacing. After replacing set 
+    the clock of this new block to the
+    highest clock + 1
+    
+    Example:
+                 low            high
+        Before: | 0 | 1 | 2 | 3 | 4 |
+        
+        After:  | 5 | 1 | 2 | 3 | 4 |
+"""
 def rr_block_replacement(cache_obj, index):
     lowest_clk = sys.maxsize
     highest_clk = - sys.maxsize - 1
     high_ndx = -1
     low_ndx = -1
     loop_count = 0
+
+    # loop until index of block with lowest clock is found
     for blk in cache_obj[index]:
         if lowest_clk > blk.clock:
             lowest_clk = blk.clock
             low_ndx = loop_count
-
         loop_count += 1
 
+    # reset loop count
     loop_count = 0
+
+    # loop until index of block with highest clock is found
     for blk in cache_obj[index]:
         if highest_clk < blk.clock:
             highest_clk = blk.clock
             high_ndx = loop_count
-
         loop_count += 1
 
     return low_ndx, high_ndx
 
 
+""" Returns updated cache after processing tag passed in """
 def update_cache(cache, ndx, tag):
     global miss_count, conflict_count, compulsory_count
-    global line_count, rows
 
     # every block in set has a vi bit set to zero
     if check_if_cache_empty(cache, ndx) is True:
@@ -215,9 +254,11 @@ def update_cache(cache, ndx, tag):
 
     # check if current tag matches any block in the blk set at cache[int_ndx]
     elif tags_match(cache, ndx, tag) is False:
+
+        # get the ndx of the next available block in cache
         col = next_avail_col_blk(cache, ndx)
 
-        # set is full at cache[int_ndx], find blk to replace with RR
+        # set is full at cache[int_ndx], find blk to replace with R-Policy
         if col == -1:
             conflict_count += 1
             low, high = rr_block_replacement(cache, ndx)
@@ -227,6 +268,7 @@ def update_cache(cache, ndx, tag):
             cache[ndx][low].clock = high_clk + 1
             cache[ndx][low].hex_index = hex(ndx)
 
+        # set wasn't full, add block
         else:
             cache[ndx][col].vi_bit = 1
             cache[ndx][col].hex_tag = tag
@@ -234,29 +276,6 @@ def update_cache(cache, ndx, tag):
 
     # return updated cache
     return cache
-
-
-# appends zero char to hex address if it needs it
-def append_zero_char(hex_address):
-    if len(hex_address) < 8:
-        hex_address = '0' + hex_address
-
-    return hex_address
-
-
-def return_second_index_address(old_address, bytes_read):
-    new_addr_h = int(old_address, 16) + bytes_read
-    new_addr_h = str(hex(new_addr_h))[2:]
-    new_addr_h = append_zero_char(new_addr_h)
-
-    return new_addr_h
-
-
-def format_hex_num(unformatted_hex):
-    while(len(unformatted_hex) != 8):
-        unformatted_hex = '0' + unformatted_hex
-
-    return unformatted_hex
 
 
 def access_cache(hex_address, bytes_read):
@@ -337,14 +356,6 @@ print('Total Implementation Memory Size:', totalImpSz_str, 'bytes (or ' + totalI
 rows = int(math.pow(2, indexBits))
 cols = int(associativity)
 cache = [[CacheBlock() for j in range(cols)] for i in range(rows)]
-
-
-# making blocks in a set a linked list
-for row in cache:
-    count = 0
-    for col in row:
-        col.clock = count
-        count += 1
 
 # parsing
 file_name = sys.argv[2]
