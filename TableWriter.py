@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from openpyxl import Workbook
+#from openpyxl import Workbook
 import sys
 import re
 data = sys.stdin.readlines()
@@ -23,7 +23,6 @@ for line in data:
 
     # Trace file line
     if line_count is 3:
-        f_line = re.sub('')
         print(f_line)
 
     # cache size
@@ -32,7 +31,9 @@ for line in data:
 
     # block size
     elif line_count is 6:
-        print(f_line)
+        block_size = f_line.split("bytes")
+        block_size = f_line[0] + "B"
+        print(block_size)
 
     # assoc
     elif line_count is 7:
@@ -44,7 +45,9 @@ for line in data:
 
     # total blocks
     elif line_count is 10:
-        print(f_line)
+        total_blocks = f_line.split("(")
+        total_blocks = total_blocks[0]
+        print(total_blocks)
 
     # tag bits
     elif line_count is 11:
@@ -52,7 +55,13 @@ for line in data:
 
     # index bits and total rows
     elif line_count is 12:
-        print(f_line)
+        index_line_elements = f_line.split(",")
+        index_bits = index_line_elements[0]
+        index_line_elements = f_line.split(":")
+        total_indices = index_line_elements[1]
+
+        print(index_bits)
+        print(total_indices)
 
     # total cache accesses
     elif line_count is 17:
@@ -75,8 +84,6 @@ for line in data:
         print(f_line)
 
     line_count += 1
-
-print("DONE")
 
 ''''
 # create Workbook object

@@ -4,7 +4,7 @@ import os
 import time
 
 cache_size = 1
-block_size = 4
+block_size = 2
 assoc = 1
 
 while assoc != 16:
@@ -22,4 +22,4 @@ while assoc != 16:
     command = ''.join(command)
     os.system(command)
     cache_size *= 2
-    time.sleep(14)
+    time.sleep(5)

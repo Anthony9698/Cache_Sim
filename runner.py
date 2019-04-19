@@ -5,7 +5,7 @@ import time
 
 
 cache_size = 1
-block_size = 4
+block_size = 2
 assoc = 1
 
 while assoc != 16:
@@ -24,5 +24,7 @@ while assoc != 16:
     os.system(command)
 
     cache_size *= 2
-    time.sleep(13)
+
+    print("Cache Size: ", cache_size, " Block size: ", block_size, " Assoc: ", assoc)
+    time.sleep(8)
 
